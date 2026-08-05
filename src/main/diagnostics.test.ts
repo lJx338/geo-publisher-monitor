@@ -11,6 +11,7 @@ describe('monitor diagnostics', () => {
     expect(classifyFailure(new Error('需要滑块验证')).code).toBe('RISK_CONTROL_REQUIRED');
     expect(classifyFailure(new Error('NETWORK_SLOW timeout')).code).toBe('NETWORK_SLOW');
     expect(classifyFailure(new Error('今日次数已用完')).code).toBe('QUOTA_EXHAUSTED');
+    expect(classifyFailure({ code: 'PLATFORM_SCHEMA_CHANGED', message: 'selector changed' })).toEqual({ code: 'PLATFORM_SCHEMA_CHANGED', message: 'selector changed' });
   });
 
   it('uses stable page attributes for fingerprints', () => {

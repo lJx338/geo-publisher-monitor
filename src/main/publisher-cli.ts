@@ -54,8 +54,9 @@ export class PublisherCli {
       throw new PublisherCliError('PUBLISHER_UPDATE_REQUIRED', `GEO Publisher ${version || '未知版本'} 过低，需要 0.2.0 或更高版本`);
     }
     if (!record.ready) await this.execute(['start'], undefined, 35_000);
+    const doctor = await this.execute(['doctor'], undefined, 20_000);
     const status = await this.execute(['status'], undefined, 20_000) as Record<string, unknown>;
-    return { connected: true, version, busy: Boolean(status.busy), raw: status };
+    return { connected: true, version, busy: Boolean(status.busy), raw: { doctor, status } };
   }
 
   inspect(platform: Platform): Promise<unknown> {

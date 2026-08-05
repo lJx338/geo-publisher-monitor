@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { PNG } from 'pngjs';
-import type { MonitorErrorCode, Platform } from '../shared.js';
+import { monitorErrorCodes, type MonitorErrorCode, type Platform } from '../shared.js';
 
 export const FINGERPRINT_SCHEMA_VERSION = 1;
 
@@ -14,6 +14,10 @@ function textOf(value: unknown): string {
 }
 
 export function classifyFailure(error: unknown, inspect?: unknown): { code: MonitorErrorCode; message: string } {
+  const coded = error && typeof error === 'object' ? error as { code?: unknown; message?: unknown } : {};
+  if (typeof coded.code === 'string' && monitorErrorCodes.includes(coded.code as MonitorErrorCode)) {
+    return { code: coded.code as MonitorErrorCode, message: typeof coded.message === 'string' ? coded.message : coded.code };
+  }
   const raw = `${error instanceof Error ? error.message : textOf(error)} ${textOf(inspect)}`;
   if (/登录|扫码|login|passport|重新登录/i.test(raw)) return { code: 'LOGIN_REQUIRED', message: '平台登录态失效或需要登录' };
   if (/验证码|安全验证|风险|滑块|captcha|verify/i.test(raw)) return { code: 'RISK_CONTROL_REQUIRED', message: '平台要求人工完成验证或风控处理' };

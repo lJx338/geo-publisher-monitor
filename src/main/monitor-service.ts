@@ -101,7 +101,7 @@ export class MonitorService {
       });
       await this.store.saveWeekly(articles, 'generated');
       await this.store.addTopics(articles);
-      await this.notifier.sendText('周更文章已生成', articles.map((item) => `${PLATFORM_NAMES[item.platform]}：${item.title}`));
+      await this.notifySafely('周更文章已生成', articles.map((item) => `${PLATFORM_NAMES[item.platform]}：${item.title}`));
       return articles;
     });
   }
@@ -170,13 +170,13 @@ export class MonitorService {
       const previous = this.platformResults[result.platform];
       this.platformResults[result.platform] = result;
       if (result.status === 'failed' || result.status === 'uncertain') {
-        await this.notifier.sendText(`${PLATFORM_NAMES[result.platform]}巡检异常`, [result.code || 'UNKNOWN', result.message, `阶段：${result.stage}`, `耗时：${Math.round(result.durationMs / 1000)}秒`], result.screenshotPath);
+        await this.notifySafely(`${PLATFORM_NAMES[result.platform]}巡检异常`, [result.code || 'UNKNOWN', result.message, `阶段：${result.stage}`, `耗时：${Math.round(result.durationMs / 1000)}秒`], result.screenshotPath);
       } else if (previous && (previous.status === 'failed' || previous.status === 'uncertain')) {
-        await this.notifier.sendText(`${PLATFORM_NAMES[result.platform]}已恢复`, [result.message]);
+        await this.notifySafely(`${PLATFORM_NAMES[result.platform]}已恢复`, [result.message]);
       }
     }
     if (kind === 'weekly-publish' || (kind === 'patrol' && new Date().getHours() === 19)) {
-      await this.notifier.sendText(kind === 'weekly-publish' ? '每周实发结果' : '每日巡检汇总', run.results.map((item) => `${PLATFORM_NAMES[item.platform]}：${item.status} ${item.message}`));
+      await this.notifySafely(kind === 'weekly-publish' ? '每周实发结果' : '每日巡检汇总', run.results.map((item) => `${PLATFORM_NAMES[item.platform]}：${item.status} ${item.message}`));
     }
     this.onChange();
     return run;
@@ -250,6 +250,11 @@ export class MonitorService {
     if (/result_uncertain|"status":"uncertain"|"outcome":"uncertain"/.test(raw)) return 'uncertain';
     if (/"status":"success"|"outcome":"success"|"published":true|"publishsuccess":true/.test(raw)) return 'success';
     return 'failed';
+  }
+
+  private async notifySafely(title: string, lines: string[], screenshotPath?: string): Promise<void> {
+    try { await this.notifier.sendText(title, lines, screenshotPath); }
+    catch { /* Notification delivery must not change the patrol or publish result. */ }
   }
 
   private result(platform: Platform, startedAt: string, status: PlatformRunResult['status'], stage: string, message: string, screenshotPath?: string, fingerprint?: string, previousFingerprint?: string, details?: unknown, code?: PlatformRunResult['code']): PlatformRunResult {
