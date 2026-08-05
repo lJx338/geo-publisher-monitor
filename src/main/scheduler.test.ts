@@ -12,9 +12,9 @@ describe('MonitorScheduler', () => {
       patrol: async () => { throw new Error('not called'); }, generate: async () => undefined,
       preflight: async () => { throw new Error('not called'); }, publish: async () => { throw new Error('not called'); },
     }, () => undefined);
-    const next = scheduler.nextPatrolAt(new Date('2026-08-05T08:00:00+08:00'));
+    const next = scheduler.nextPatrolAt(new Date(2026, 7, 5, 8, 0, 0));
     expect(new Date(next!).getHours()).toBe(13);
-    const overnight = scheduler.nextPatrolAt(new Date('2026-08-05T20:00:00+08:00'));
+    const overnight = scheduler.nextPatrolAt(new Date(2026, 7, 5, 20, 0, 0));
     expect(new Date(overnight!).getHours()).toBe(1);
   });
 });
