@@ -1,0 +1,48 @@
+name: Release macOS Apple Silicon
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  TENCENT_COS_BUCKET: ${{ vars.TENCENT_COS_BUCKET }}
+  TENCENT_COS_REGION: ${{ vars.TENCENT_COS_REGION }}
+  TENCENT_COS_PREFIX: ${{ vars.TENCENT_COS_PREFIX }}
+  TENCENT_CLOUD_SECRET_ID: ${{ secrets.TENCENT_CLOUD_SECRET_ID }}
+  TENCENT_CLOUD_SECRET_KEY: ${{ secrets.TENCENT_CLOUD_SECRET_KEY }}
+
+jobs:
+  release-macos-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Verify tag matches package version
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Build, sign and notarize
+        run: npx electron-builder --mac --arm64 --publish never --config.directories.output=release/mac-arm64
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - run: python -m pip install coscmd
+      - name: Upload immutable artifacts and stable manifest
+        run: sh scripts/upload-release.sh release/mac-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geo-publisher-monitor-macos-arm64
+          path: |
+            release/mac-arm64/*.dmg
+            release/mac-arm64/*.zip
+            release/mac-arm64/*.yml
+            release/mac-arm64/*.blockmap

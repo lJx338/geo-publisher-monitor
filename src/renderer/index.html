@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEO Publisher Monitor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"><span></span><span></span><span></span></div>
+      <div><strong>GEO Publisher Monitor</strong><small>开发端平台巡检</small></div>
+    </div>
+    <div class="top-actions">
+      <span id="publisher-status" class="status-pill neutral">正在连接 GEO Publisher</span>
+      <span id="version" class="version">v0.1.0</span>
+      <button id="settings-button" class="icon-button" title="设置">⚙</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PLATFORM HEALTH</p>
+        <h1>六平台发布链路巡检</h1>
+        <p id="summary">自动检查编辑器、封面、声明、发布按钮与页面结构。</p>
+      </div>
+      <div class="hero-actions">
+        <button id="run-all" class="primary">立即巡检全部平台</button>
+        <button id="open-settings" class="secondary">配置提醒与模型</button>
+      </div>
+    </section>
+
+    <section class="metrics">
+      <article><span>运行状态</span><strong id="running-state">空闲</strong><small id="current-task">没有正在执行的任务</small></article>
+      <article><span>下次巡检</span><strong id="next-run">--</strong><small>每天 4 个时间点</small></article>
+      <article><span>最近结果</span><strong id="latest-result">尚无记录</strong><small id="latest-time">--</small></article>
+      <article><span>自动实发</span><strong id="publish-state">未启用</strong><small>周三 10:30，默认关闭</small></article>
+    </section>
+
+    <section class="section-heading">
+      <div><h2>平台状态</h2><p>失败截图和结构化证据保存在本机报告目录。</p></div>
+      <span id="progress-note"></span>
+    </section>
+    <section id="platform-grid" class="platform-grid"></section>
+
+    <section class="weekly-panel">
+      <div>
+        <p class="eyebrow">WEEKLY LIVE CHECK</p>
+        <h2>每周真实发布验收</h2>
+        <p>周三 09:30 生成六篇独立AI行业文章，10:00预检，10:30在满足门禁后串行实发。</p>
+      </div>
+      <div class="weekly-actions">
+        <button id="weekly-generate" class="secondary">生成本周文章</button>
+        <button id="weekly-preflight" class="secondary">执行六平台预检</button>
+        <button id="weekly-publish" class="danger">真实发布</button>
+      </div>
+    </section>
+
+    <section class="update-panel">
+      <div><strong>巡检工具更新</strong><span id="update-message">开发模式不检查更新</span></div>
+      <div><button id="check-update" class="text-button">检查更新</button><button id="install-update" class="primary hidden">重启并安装</button></div>
+    </section>
+  </main>
+
+  <dialog id="settings-dialog">
+    <form id="settings-form" method="dialog">
+      <div class="dialog-header"><div><h2>巡检设置</h2><p>密钥使用 macOS 钥匙串加密保存。</p></div><button id="close-settings" type="button" class="icon-button">×</button></div>
+      <div class="form-grid">
+        <label class="full">巡检时间（小时，逗号分隔）<input id="schedule-hours" value="1,7,13,19"></label>
+        <label class="switch full"><input id="open-at-login" type="checkbox"><span></span>登录 macOS 后自动启动</label>
+        <label class="switch full warning"><input id="auto-publish" type="checkbox"><span></span>启用每周三真实自动发布</label>
+        <div class="form-section full">飞书提醒</div>
+        <label class="full">机器人 Webhook<input id="feishu-webhook" type="url" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></label>
+        <label>飞书 App ID<input id="feishu-app-id" placeholder="cli_xxx"></label>
+        <label>飞书 App Secret<input id="feishu-app-secret" type="password" placeholder="留空则保持原值"></label>
+        <div class="form-section full">OpenAI 兼容接口</div>
+        <label class="full">Base URL<input id="llm-base-url" placeholder="https://api.openai.com/v1"></label>
+        <label>模型名<input id="llm-model" placeholder="模型名称"></label>
+        <label>API Key<input id="llm-api-key" type="password" placeholder="留空则保持原值"></label>
+      </div>
+      <div class="dialog-actions"><button id="test-feishu" type="button" class="secondary">测试飞书通知</button><span></span><button id="cancel-settings" type="button" class="text-button">取消</button><button type="submit" class="primary">保存设置</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>
