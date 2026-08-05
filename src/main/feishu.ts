@@ -4,7 +4,7 @@ import { basename } from 'node:path';
 interface FeishuConfig {
   appId: string;
   appSecret: string;
-  chatId: string;
+  recipient: string;
 }
 
 interface FeishuResponse {
@@ -27,23 +27,25 @@ export class FeishuNotifier {
     this.validateConfig(config);
     const token = await this.token(config);
     const text = [`【${title}】`, ...lines].join('\n');
-    await this.sendMessage(token, config.chatId, 'text', { text });
+    await this.sendMessage(token, config.recipient, 'text', { text });
     if (!screenshotPath) return;
     try {
       const imageKey = await this.uploadImage(token, screenshotPath);
-      await this.sendMessage(token, config.chatId, 'image', { image_key: imageKey });
+      await this.sendMessage(token, config.recipient, 'image', { image_key: imageKey });
     } catch (error) {
-      await this.sendMessage(token, config.chatId, 'text', {
+      await this.sendMessage(token, config.recipient, 'text', {
         text: `截图发送失败，证据已保存在开发机：${screenshotPath}\n${error instanceof Error ? error.message : String(error)}`,
       });
     }
   }
 
   private validateConfig(config: FeishuConfig): void {
-    const missing = [!config.appId && 'App ID', !config.appSecret && 'App Secret', !config.chatId && '接收群 Chat ID'].filter(Boolean);
+    const missing = [!config.appId && 'App ID', !config.appSecret && 'App Secret', !config.recipient && '接收人'].filter(Boolean);
     if (missing.length) throw new Error(`请先配置飞书应用机器人的 ${missing.join('、')}`);
     if (!config.appId.startsWith('cli_')) throw new Error('飞书 App ID 格式不正确，应以 cli_ 开头');
-    if (!config.chatId.startsWith('oc_')) throw new Error('飞书群 Chat ID 格式不正确，应以 oc_ 开头');
+    if (!config.recipient.startsWith('ou_') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.recipient)) {
+      throw new Error('飞书接收人应填写企业邮箱或 ou_ 开头的 Open ID');
+    }
   }
 
   private async token(config: FeishuConfig): Promise<string> {
@@ -77,11 +79,12 @@ export class FeishuNotifier {
     return payload.data.image_key;
   }
 
-  private async sendMessage(token: string, chatId: string, msgType: 'text' | 'image', content: unknown): Promise<void> {
-    const response = await fetch('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id', {
+  private async sendMessage(token: string, recipient: string, msgType: 'text' | 'image', content: unknown): Promise<void> {
+    const receiveIdType = recipient.startsWith('ou_') ? 'open_id' : 'email';
+    const response = await fetch(`https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=${receiveIdType}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ receive_id: chatId, msg_type: msgType, content: JSON.stringify(content) }),
+      body: JSON.stringify({ receive_id: recipient, msg_type: msgType, content: JSON.stringify(content) }),
       signal: AbortSignal.timeout(20_000),
     });
     await this.payload(response, '发送飞书机器人消息失败');

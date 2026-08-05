@@ -8,7 +8,7 @@ interface StoredSettings {
   autoPublishEnabled: boolean;
   openAtLogin: boolean;
   feishuAppId: string;
-  feishuChatId: string;
+  feishuRecipient: string;
   encryptedFeishuAppSecret: string;
   llmBaseUrl: string;
   llmModel: string;
@@ -20,7 +20,7 @@ const defaults: StoredSettings = {
   autoPublishEnabled: false,
   openAtLogin: true,
   feishuAppId: '',
-  feishuChatId: '',
+  feishuRecipient: '',
   encryptedFeishuAppSecret: '',
   llmBaseUrl: 'https://api.openai.com/v1',
   llmModel: '',
@@ -51,7 +51,7 @@ export class SettingsStore {
       autoPublishEnabled: this.value.autoPublishEnabled,
       openAtLogin: this.value.openAtLogin,
       feishuAppId: this.value.feishuAppId,
-      feishuChatId: this.value.feishuChatId,
+      feishuRecipient: this.value.feishuRecipient,
       hasFeishuAppSecret: Boolean(this.value.encryptedFeishuAppSecret),
       llmBaseUrl: this.value.llmBaseUrl,
       llmModel: this.value.llmModel,
@@ -73,7 +73,7 @@ export class SettingsStore {
       autoPublishEnabled: input.autoPublishEnabled,
       openAtLogin: input.openAtLogin,
       feishuAppId: input.feishuAppId,
-      feishuChatId: input.feishuChatId,
+      feishuRecipient: input.feishuRecipient,
       llmBaseUrl: input.llmBaseUrl.replace(/\/+$/, ''),
       llmModel: input.llmModel,
     };

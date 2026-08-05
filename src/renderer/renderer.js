@@ -51,7 +51,7 @@ function openSettings(){
   $('open-at-login').checked=settings.openAtLogin;
   $('auto-publish').checked=settings.autoPublishEnabled;
   $('feishu-app-id').value=settings.feishuAppId;
-  $('feishu-chat-id').value=settings.feishuChatId;
+  $('feishu-recipient').value=settings.feishuRecipient;
   $('feishu-app-secret').value='';
   $('feishu-app-secret').placeholder=settings.hasFeishuAppSecret?'已安全保存，留空保持原值':'请输入 App Secret';
   $('llm-base-url').value=settings.llmBaseUrl;
@@ -73,7 +73,7 @@ $('install-update').addEventListener('click',()=>window.monitor.installUpdate())
 $('settings-form').addEventListener('submit',async(event)=>{
   event.preventDefault();
   const hours=$('schedule-hours').value.split(',').map((v)=>Number(v.trim())).filter(Number.isInteger);
-  await action(()=>window.monitor.saveSettings({scheduleHours:hours,autoPublishEnabled:$('auto-publish').checked,openAtLogin:$('open-at-login').checked,feishuAppId:$('feishu-app-id').value,feishuChatId:$('feishu-chat-id').value,feishuAppSecret:$('feishu-app-secret').value||undefined,llmBaseUrl:$('llm-base-url').value,llmModel:$('llm-model').value,llmApiKey:$('llm-api-key').value||undefined}),'设置已保存');
+  await action(()=>window.monitor.saveSettings({scheduleHours:hours,autoPublishEnabled:$('auto-publish').checked,openAtLogin:$('open-at-login').checked,feishuAppId:$('feishu-app-id').value,feishuRecipient:$('feishu-recipient').value,feishuAppSecret:$('feishu-app-secret').value||undefined,llmBaseUrl:$('llm-base-url').value,llmModel:$('llm-model').value,llmApiKey:$('llm-api-key').value||undefined}),'设置已保存');
   $('settings-dialog').close();
 });
 

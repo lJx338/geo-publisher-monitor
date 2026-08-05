@@ -53,7 +53,7 @@ export interface PublicSettings {
   autoPublishEnabled: boolean;
   openAtLogin: boolean;
   feishuAppId: string;
-  feishuChatId: string;
+  feishuRecipient: string;
   hasFeishuAppSecret: boolean;
   llmBaseUrl: string;
   llmModel: string;
@@ -65,7 +65,7 @@ export const settingsInputSchema = z.object({
   autoPublishEnabled: z.boolean(),
   openAtLogin: z.boolean(),
   feishuAppId: z.string().trim(),
-  feishuChatId: z.string().trim(),
+  feishuRecipient: z.string().trim(),
   feishuAppSecret: z.string().optional(),
   clearFeishuAppSecret: z.boolean().optional(),
   llmBaseUrl: z.string().trim(),
