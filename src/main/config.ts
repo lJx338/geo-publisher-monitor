@@ -7,8 +7,8 @@ interface StoredSettings {
   scheduleHours: number[];
   autoPublishEnabled: boolean;
   openAtLogin: boolean;
-  feishuWebhook: string;
   feishuAppId: string;
+  feishuChatId: string;
   encryptedFeishuAppSecret: string;
   llmBaseUrl: string;
   llmModel: string;
@@ -19,8 +19,8 @@ const defaults: StoredSettings = {
   scheduleHours: [1, 7, 13, 19],
   autoPublishEnabled: false,
   openAtLogin: true,
-  feishuWebhook: '',
   feishuAppId: '',
+  feishuChatId: '',
   encryptedFeishuAppSecret: '',
   llmBaseUrl: 'https://api.openai.com/v1',
   llmModel: '',
@@ -50,8 +50,8 @@ export class SettingsStore {
       scheduleHours: [...this.value.scheduleHours],
       autoPublishEnabled: this.value.autoPublishEnabled,
       openAtLogin: this.value.openAtLogin,
-      feishuWebhook: this.value.feishuWebhook,
       feishuAppId: this.value.feishuAppId,
+      feishuChatId: this.value.feishuChatId,
       hasFeishuAppSecret: Boolean(this.value.encryptedFeishuAppSecret),
       llmBaseUrl: this.value.llmBaseUrl,
       llmModel: this.value.llmModel,
@@ -72,8 +72,8 @@ export class SettingsStore {
       scheduleHours: [...new Set(input.scheduleHours)].sort((a, b) => a - b),
       autoPublishEnabled: input.autoPublishEnabled,
       openAtLogin: input.openAtLogin,
-      feishuWebhook: input.feishuWebhook,
       feishuAppId: input.feishuAppId,
+      feishuChatId: input.feishuChatId,
       llmBaseUrl: input.llmBaseUrl.replace(/\/+$/, ''),
       llmModel: input.llmModel,
     };

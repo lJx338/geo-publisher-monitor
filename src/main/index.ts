@@ -24,7 +24,7 @@ async function run(): Promise<void> {
   const notifier = new FeishuNotifier(() => {
     const publicValue = settings.publicValue();
     const secrets = settings.credentials();
-    return { webhook: publicValue.feishuWebhook, appId: publicValue.feishuAppId, appSecret: secrets.feishuAppSecret };
+    return { appId: publicValue.feishuAppId, appSecret: secrets.feishuAppSecret, chatId: publicValue.feishuChatId };
   });
 
   const startedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin;

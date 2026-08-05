@@ -52,8 +52,8 @@ export interface PublicSettings {
   scheduleHours: number[];
   autoPublishEnabled: boolean;
   openAtLogin: boolean;
-  feishuWebhook: string;
   feishuAppId: string;
+  feishuChatId: string;
   hasFeishuAppSecret: boolean;
   llmBaseUrl: string;
   llmModel: string;
@@ -64,8 +64,8 @@ export const settingsInputSchema = z.object({
   scheduleHours: z.array(z.number().int().min(0).max(23)).min(1).max(12),
   autoPublishEnabled: z.boolean(),
   openAtLogin: z.boolean(),
-  feishuWebhook: z.string().trim(),
   feishuAppId: z.string().trim(),
+  feishuChatId: z.string().trim(),
   feishuAppSecret: z.string().optional(),
   clearFeishuAppSecret: z.boolean().optional(),
   llmBaseUrl: z.string().trim(),

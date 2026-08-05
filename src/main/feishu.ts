@@ -2,69 +2,94 @@ import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
 
 interface FeishuConfig {
-  webhook: string;
   appId: string;
   appSecret: string;
+  chatId: string;
+}
+
+interface FeishuResponse {
+  code?: number;
+  msg?: string;
+  tenant_access_token?: string;
+  expire?: number;
+  data?: { image_key?: string };
 }
 
 export class FeishuNotifier {
+  private accessToken = '';
+  private tokenAppId = '';
+  private tokenExpiresAt = 0;
+
   constructor(private readonly getConfig: () => FeishuConfig) {}
 
   async sendText(title: string, lines: string[], screenshotPath?: string): Promise<void> {
     const config = this.getConfig();
-    if (!config.webhook) return;
+    this.validateConfig(config);
+    const token = await this.token(config);
     const text = [`【${title}】`, ...lines].join('\n');
-    await this.webhook(config.webhook, { msg_type: 'text', content: { text } });
-    if (!screenshotPath || !config.appId || !config.appSecret) return;
+    await this.sendMessage(token, config.chatId, 'text', { text });
+    if (!screenshotPath) return;
     try {
-      const imageKey = await this.uploadImage(config, screenshotPath);
-      await this.webhook(config.webhook, { msg_type: 'image', content: { image_key: imageKey } });
+      const imageKey = await this.uploadImage(token, screenshotPath);
+      await this.sendMessage(token, config.chatId, 'image', { image_key: imageKey });
     } catch (error) {
-      await this.webhook(config.webhook, {
-        msg_type: 'text',
-        content: { text: `截图上传失败，已保存在开发机：${screenshotPath}\n${error instanceof Error ? error.message : String(error)}` },
+      await this.sendMessage(token, config.chatId, 'text', {
+        text: `截图发送失败，证据已保存在开发机：${screenshotPath}\n${error instanceof Error ? error.message : String(error)}`,
       });
     }
   }
 
-  private async uploadImage(config: FeishuConfig, path: string): Promise<string> {
-    const tokenResponse = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+  private validateConfig(config: FeishuConfig): void {
+    const missing = [!config.appId && 'App ID', !config.appSecret && 'App Secret', !config.chatId && '接收群 Chat ID'].filter(Boolean);
+    if (missing.length) throw new Error(`请先配置飞书应用机器人的 ${missing.join('、')}`);
+    if (!config.appId.startsWith('cli_')) throw new Error('飞书 App ID 格式不正确，应以 cli_ 开头');
+    if (!config.chatId.startsWith('oc_')) throw new Error('飞书群 Chat ID 格式不正确，应以 oc_ 开头');
+  }
+
+  private async token(config: FeishuConfig): Promise<string> {
+    if (this.accessToken && this.tokenAppId === config.appId && Date.now() < this.tokenExpiresAt) return this.accessToken;
+    const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ app_id: config.appId, app_secret: config.appSecret }),
       signal: AbortSignal.timeout(20_000),
     });
-    const tokenPayload = await tokenResponse.json() as { code?: number; msg?: string; tenant_access_token?: string };
-    if (!tokenResponse.ok || tokenPayload.code || !tokenPayload.tenant_access_token) {
-      throw new Error(`获取飞书访问令牌失败：${tokenPayload.msg || tokenResponse.status}`);
-    }
+    const payload = await this.payload(response, '获取飞书访问令牌失败');
+    if (!payload.tenant_access_token) throw new Error('获取飞书访问令牌失败：响应中没有 token');
+    this.accessToken = payload.tenant_access_token;
+    this.tokenAppId = config.appId;
+    this.tokenExpiresAt = Date.now() + Math.max(60, (payload.expire || 7200) - 300) * 1000;
+    return this.accessToken;
+  }
+
+  private async uploadImage(token: string, path: string): Promise<string> {
     const form = new FormData();
     form.set('image_type', 'message');
     form.set('image', new Blob([await readFile(path)]), basename(path));
-    const imageResponse = await fetch('https://open.feishu.cn/open-apis/im/v1/images', {
+    const response = await fetch('https://open.feishu.cn/open-apis/im/v1/images', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${tokenPayload.tenant_access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
       body: form,
       signal: AbortSignal.timeout(30_000),
     });
-    const imagePayload = await imageResponse.json() as { code?: number; msg?: string; data?: { image_key?: string } };
-    if (!imageResponse.ok || imagePayload.code || !imagePayload.data?.image_key) {
-      throw new Error(`上传飞书图片失败：${imagePayload.msg || imageResponse.status}`);
-    }
-    return imagePayload.data.image_key;
+    const payload = await this.payload(response, '上传飞书图片失败');
+    if (!payload.data?.image_key) throw new Error('上传飞书图片失败：响应中没有 image_key');
+    return payload.data.image_key;
   }
 
-  private async webhook(url: string, payload: unknown): Promise<void> {
-    const response = await fetch(url, {
+  private async sendMessage(token: string, chatId: string, msgType: 'text' | 'image', content: unknown): Promise<void> {
+    const response = await fetch('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receive_id: chatId, msg_type: msgType, content: JSON.stringify(content) }),
       signal: AbortSignal.timeout(20_000),
     });
-    if (!response.ok) throw new Error(`飞书机器人返回 HTTP ${response.status}`);
-    const body = await response.json() as { code?: number; StatusCode?: number; msg?: string; StatusMessage?: string };
-    if ((body.code && body.code !== 0) || (body.StatusCode && body.StatusCode !== 0)) {
-      throw new Error(body.msg || body.StatusMessage || '飞书机器人发送失败');
-    }
+    await this.payload(response, '发送飞书机器人消息失败');
+  }
+
+  private async payload(response: Response, action: string): Promise<FeishuResponse> {
+    const payload = await response.json().catch(() => ({})) as FeishuResponse;
+    if (!response.ok || payload.code) throw new Error(`${action}：${payload.msg || `HTTP ${response.status}`}`);
+    return payload;
   }
 }

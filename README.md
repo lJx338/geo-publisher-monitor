@@ -12,6 +12,10 @@ npm run dev
 
 需要先安装并打开 GEO Publisher 0.2.0 或更高版本，并使用专用测试账号登录六个平台。
 
+## 飞书应用机器人
+
+Monitor 统一通过飞书应用机器人发送通知，不使用群自定义机器人 Webhook。应用需要启用机器人能力、发布可用版本，并开通 `im:message` 和 `im:resource` 权限。将机器人加入接收群后，在设置中填写 App ID、App Secret 和该群的 Chat ID（`oc_` 开头）。
+
 ## 安全边界
 
 - 自动实发默认关闭。
