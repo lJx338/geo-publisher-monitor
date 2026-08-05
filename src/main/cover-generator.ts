@@ -16,7 +16,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 }
 
-export async function generateCover(directory: string, platform: Platform, title: string, index: number, patrolMarker = false): Promise<string> {
+export async function generateCover(directory: string, platform: Platform, title: string, index: number, patrolMarker = false, outputSuffix = ''): Promise<string> {
   await mkdir(directory, { recursive: true });
   const [accent, dark, light] = palettes[index % palettes.length]!;
   const html = `<!doctype html><meta charset="utf-8"><style>
@@ -31,7 +31,7 @@ export async function generateCover(directory: string, platform: Platform, title
   try {
     await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
     const image = await window.webContents.capturePage({ x: 0, y: 0, width: 1200, height: 675 });
-    const path = join(directory, `${platform}-cover.png`);
+    const path = join(directory, `${platform}-cover${outputSuffix ? `-${outputSuffix}` : ''}.png`);
     await writeFile(path, image.toPNG());
     return path;
   } finally {

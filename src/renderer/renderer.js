@@ -17,7 +17,7 @@ function render(next) {
   $('current-task').textContent = next.currentTask || '没有正在执行的任务';
   $('next-run').textContent = formatTime(next.nextPatrolAt);
   $('publish-state').textContent = next.settings.autoPublishEnabled ? '已启用' : '未启用';
-  $('latest-result').textContent = next.latestRun ? ({success:'全部正常',partial:'部分异常',failed:'巡检失败',skipped:'任务跳过'}[next.latestRun.status] || next.latestRun.status) : '尚无记录';
+  $('latest-result').textContent = next.running ? '巡检中' : next.latestRun ? ({success:'全部正常',partial:'部分异常',failed:'巡检失败',skipped:'任务跳过'}[next.latestRun.status] || next.latestRun.status) : '尚无记录';
   $('latest-time').textContent = next.latestRun ? formatTime(next.latestRun.finishedAt) : '--';
   $('progress-note').textContent = next.running ? `正在执行：${next.currentTask}` : '';
   $('run-all').disabled = next.running;

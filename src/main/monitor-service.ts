@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DashboardState, MonitorRun, Platform, PlatformRunResult, WeeklyArticle } from '../shared.js';
 import { PLATFORMS, PLATFORM_NAMES } from '../shared.js';
@@ -82,7 +82,7 @@ export class MonitorService {
       this.publisher = { connected: true, version: health.version, busy: health.busy, message: health.busy ? '桌面端正在执行任务' : '桌面端已连接' };
       if (health.busy) return await this.saveSkipped(kind, 'PUBLISHER_BUSY', 'GEO Publisher 正在执行其他任务');
       const articles = await this.patrolArticles(only || PLATFORMS);
-      return await this.executeArticles(kind, articles, false, true);
+      return await this.executeArticles(kind, articles, false, kind === 'patrol');
     });
   }
 
@@ -144,14 +144,21 @@ export class MonitorService {
     for (const article of articles) {
       const result = await this.executePlatform(article, publish, kind === 'patrol' || kind === 'manual');
       firstResults.push(result);
+      this.platformResults[result.platform] = result;
+      this.onChange();
       if (allowRetry && result.code && ['NETWORK_SLOW', 'ADAPTER_ERROR', 'PLATFORM_SCHEMA_CHANGED'].includes(result.code)) retryArticles.push(article);
     }
     if (retryArticles.length) {
-      await new Promise((resolve) => setTimeout(resolve, this.retryDelayMs));
+      const previousTask = this.currentTask;
+      await this.waitForRetry(retryArticles.map((article) => PLATFORM_NAMES[article.platform]));
+      this.currentTask = previousTask;
+      this.onChange();
       for (const article of retryArticles) {
         const retry = await this.executePlatform(article, publish, kind === 'patrol' || kind === 'manual');
         const index = firstResults.findIndex((item) => item.platform === article.platform);
         firstResults[index] = retry;
+        this.platformResults[retry.platform] = retry;
+        this.onChange();
       }
     }
     const run: MonitorRun = {
@@ -236,10 +243,12 @@ export class MonitorService {
 
   private async patrolArticles(platforms: readonly Platform[]): Promise<WeeklyArticle[]> {
     const directory = join(this.dataDirectory, 'patrol-assets');
+    await rm(directory, { recursive: true, force: true });
     await mkdir(directory, { recursive: true });
+    const runToken = String(Date.now());
     const articles: WeeklyArticle[] = [];
     for (const [index, platform] of platforms.entries()) {
-      const coverPath = await generateCover(directory, platform, PATROL_TITLE, index, true);
+      const coverPath = await generateCover(directory, platform, PATROL_TITLE, index, true, runToken);
       articles.push({ platform, title: PATROL_TITLE, html: PATROL_HTML, tags: ['人工智能', '行业观察'], coverPath, contentHash: createHash('sha256').update(`${platform}|${PATROL_TITLE}|${PATROL_HTML}`).digest('hex') });
     }
     return articles;
@@ -255,6 +264,16 @@ export class MonitorService {
   private async notifySafely(title: string, lines: string[], screenshotPath?: string): Promise<void> {
     try { await this.notifier.sendText(title, lines, screenshotPath); }
     catch { /* Notification delivery must not change the patrol or publish result. */ }
+  }
+
+  private async waitForRetry(platformNames: string[]): Promise<void> {
+    const deadline = Date.now() + this.retryDelayMs;
+    while (Date.now() < deadline) {
+      const minutes = Math.max(1, Math.ceil((deadline - Date.now()) / 60_000));
+      this.currentTask = `等待重试：${platformNames.join('、')}（约${minutes}分钟）`;
+      this.onChange();
+      await new Promise((resolve) => setTimeout(resolve, Math.min(60_000, Math.max(0, deadline - Date.now()))));
+    }
   }
 
   private result(platform: Platform, startedAt: string, status: PlatformRunResult['status'], stage: string, message: string, screenshotPath?: string, fingerprint?: string, previousFingerprint?: string, details?: unknown, code?: PlatformRunResult['code']): PlatformRunResult {
